@@ -62,11 +62,82 @@ class bridge_base_test extends uvm_test;
 		super.start_of_simulation_phase(phase);
 	endfunction
 
+	// Each test overrides this to choose its stimulus
+	virtual task run_seqs();
+		seq2.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
+	endtask
+
+	// After the last AHB transfer the bridge still needs a few clocks to finish on APB.
+	// Wait until the scoreboard has matched everything and stayed idle for 20 clocks.
+	task wait_for_bridge_idle();
+		int unsigned idle_clocks = 0;
+		int unsigned clocks = 0;
+		while(idle_clocks < 20 && clocks < 2000) begin
+			#10ns;
+			clocks++;
+			if(env.sco.ahb_fifo[0].used() == 0 && env.sco.apb_fifo[0].used() == 0 && !env.sco.waiting_for_apb)
+				idle_clocks++;
+			else
+				idle_clocks = 0;
+		end
+		if(idle_clocks < 20)
+			`uvm_error(get_type_name(),"TIMEOUT : bridge did not finish its APB transfers")
+	endtask
+
 	task run_phase(uvm_phase phase);
 		phase.raise_objection(this);
-		repeat(1)
-			seq2.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
-		#50;
+		run_seqs();
+		wait_for_bridge_idle();
 		phase.drop_objection(this);
+	endtask
+endclass
+
+// Ten single transfers (Hburst = SINGLE), random read or write, random size and slave
+class bridge_single_test extends bridge_base_test;
+	`uvm_component_utils(bridge_single_test)
+
+	function new(string name = "bridge_single_test", uvm_component parent);
+		super.new(name,parent);
+	endfunction
+
+	task run_seqs();
+		repeat(10) begin
+			seq1 = ahb_split_seqs::type_id::create("seq1");
+			seq1.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
+		end
+	endtask
+endclass
+
+// Incrementing bursts: defined length (INCR4/8/16) and undefined length (INCR)
+class bridge_incr_test extends bridge_base_test;
+	`uvm_component_utils(bridge_incr_test)
+
+	function new(string name = "bridge_incr_test", uvm_component parent);
+		super.new(name,parent);
+	endfunction
+
+	task run_seqs();
+		repeat(2) begin
+			seq2 = ahb_dincr_seqs::type_id::create("seq2");
+			seq2.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
+			seq3 = ahb_idincr_seqs::type_id::create("seq3");
+			seq3.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
+		end
+	endtask
+endclass
+
+// Wrapping bursts: WRAP4, WRAP8, WRAP16
+class bridge_wrap_test extends bridge_base_test;
+	`uvm_component_utils(bridge_wrap_test)
+
+	function new(string name = "bridge_wrap_test", uvm_component parent);
+		super.new(name,parent);
+	endfunction
+
+	task run_seqs();
+		repeat(3) begin
+			seq4 = ahb_wrap_seqs::type_id::create("seq4");
+			seq4.start(env.ahb_mtop.ahb_magt[0].ahb_mseqr);
+		end
 	endtask
 endclass

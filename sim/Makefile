@@ -1,4 +1,4 @@
-#Makefile for UVM Testbench - Lab 10
+#Makefile for the AHB-to-APB bridge UVM testbench
 
 # SIMULATOR = Questa for Mentor's Questasim
 # SIMULATOR = VCS for Synopsys's VCS
@@ -26,14 +26,14 @@ help:
 	@echo "! USAGE   	--  make target                  								!"
 	@echo "! clean   	=>  clean the earlier log and intermediate files.  						!"
 	@echo "! sv_cmp    	=>  Create library and compile the code.           						!"
-	@echo "! run_test	=>  clean, compile & run the simulation for ram_signle_adddr_test in batch mode.		!" 
-	@echo "! run_test1	=>  clean, compile & run the simulation for ram_ten_addr_test in batch mode.			!" 
-	@echo "! run_test2	=>  clean, compile & run the simulation for ram_odd_addr_test in batch mode.			!"
-	@echo "! run_test3	=>  clean, compile & run the simulation for ram_even_addr_test in batch mode.			!" 
-	@echo "! view_wave1 =>  To view the waveform of ram_signle_addr_test	    						!" 
-	@echo "! view_wave2 =>  To view the waveform of ram_ten_addr_test	    						!" 
-	@echo "! view_wave3 =>  To view the waveform of ram_odd_addr_test 	  						!" 
-	@echo "! view_wave4 =>  To view the waveform of ram_even_addr_test    							!" 
+	@echo "! run_test	=>  clean, compile & run the simulation for bridge_base_test (INCR4/8/16 writes) in batch mode.!" 
+	@echo "! run_test1	=>  clean, compile & run the simulation for bridge_single_test in batch mode.			!" 
+	@echo "! run_test2	=>  clean, compile & run the simulation for bridge_incr_test in batch mode.			!"
+	@echo "! run_test3	=>  clean, compile & run the simulation for bridge_wrap_test in batch mode.			!" 
+	@echo "! view_wave1 =>  To view the waveform of bridge_base_test	    						!" 
+	@echo "! view_wave2 =>  To view the waveform of bridge_single_test	    						!" 
+	@echo "! view_wave3 =>  To view the waveform of bridge_incr_test 	  						!" 
+	@echo "! view_wave4 =>  To view the waveform of bridge_wrap_test    							!" 
 	@echo "! regress    =>  clean, compile and run all testcases in batch mode.		    				!"
 	@echo "! report     =>  To merge coverage reports for all testcases and  convert to html format.			!"
 	@echo "! cov        =>  To open merged coverage report in html format.							!"
@@ -61,19 +61,19 @@ sv_cmp_Questa:
 	vlog -work $(work) $(INC) $(RTL) $(SVTB2) $(SVTB1) 	
 	
 run_test_Questa: sv_cmp
-	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH1)  -wlf wave_file1.wlf -l test1.log  -sv_seed random  work.top +UVM_TESTNAME=bridge_base_test
+	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH1)  -wlf wave_file1.wlf -l test1.log  -sv_seed random  work.bridge_top +UVM_TESTNAME=bridge_base_test
 	vcover report  -cvg  -details -nocompactcrossbins -codeAll -assert -directive -html mem_cov1
 	
 run_test1_Questa:
-	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH2)  -wlf wave_file2.wlf -l test2.log  -sv_seed random  work.top +UVM_TESTNAME=router_dst0_test
+	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH2)  -wlf wave_file2.wlf -l test2.log  -sv_seed random  work.bridge_top +UVM_TESTNAME=bridge_single_test
 	vcover report  -cvg  -details -nocompactcrossbins -codeAll -assert -directive -html mem_cov2
 	
 run_test2_Questa:
-	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH3)  -wlf wave_file3.wlf -l test3.log  -sv_seed random  work.top +UVM_TESTNAME=router_dst1_test
+	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH3)  -wlf wave_file3.wlf -l test3.log  -sv_seed random  work.bridge_top +UVM_TESTNAME=bridge_incr_test
 	vcover report  -cvg  -details -nocompactcrossbins -codeAll -assert -directive -html mem_cov3
 	
 run_test3_Questa:
-	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH4)  -wlf wave_file4.wlf -l test4.log  -sv_seed random  work.top +UVM_TESTNAME=router_dst2_test
+	vsim -cvgperinstance $(VSIMOPT) $(VSIMCOV) $(VSIMBATCH4)  -wlf wave_file4.wlf -l test4.log  -sv_seed random  work.bridge_top +UVM_TESTNAME=bridge_wrap_test
 	vcover report  -cvg  -details -nocompactcrossbins -codeAll -assert -directive -html mem_cov4
 	
 view_wave1_Questa:
@@ -113,15 +113,15 @@ run_test_VCS:	clean  sv_cmp_VCS
 	urg -dir mem_cov1.vdb -format both -report urgReport1
 	
 run_test1_VCS:	clean  sv_cmp_VCS
-	./simv -a vcs.log +fsdbfile+wave2.fsdb -cm_dir ./mem_cov2 +ntb_random_seed_automatic +UVM_TESTNAME=router_dst0_test
+	./simv -a vcs.log +fsdbfile+wave2.fsdb -cm_dir ./mem_cov2 +ntb_random_seed_automatic +UVM_TESTNAME=bridge_single_test
 	urg -dir mem_cov2.vdb -format both -report urgReport2
 	
 run_test2_VCS:	clean  sv_cmp_VCS	
-	./simv -a vcs.log +fsdbfile+wave3.fsdb -cm_dir ./mem_cov3 +ntb_random_seed_automatic +UVM_TESTNAME=router_dst1_test 
+	./simv -a vcs.log +fsdbfile+wave3.fsdb -cm_dir ./mem_cov3 +ntb_random_seed_automatic +UVM_TESTNAME=bridge_incr_test 
 	urg -dir mem_cov3.vdb -format both -report urgReport3
 	
 run_test3_VCS:	clean  sv_cmp_VCS
-	./simv -a vcs.log +fsdbfile+wave4.fsdb -cm_dir ./mem_cov4 +ntb_random_seed_automatic +UVM_TESTNAME=router_dst2_test 
+	./simv -a vcs.log +fsdbfile+wave4.fsdb -cm_dir ./mem_cov4 +ntb_random_seed_automatic +UVM_TESTNAME=bridge_wrap_test 
 	urg -dir mem_cov4.vdb -format both -report urgReport4
 	
 view_wave1_VCS: 
